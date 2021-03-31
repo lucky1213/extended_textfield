@@ -1,8 +1,7 @@
-name: extended_textfield
-description: A new Flutter package project.
+name: flutter_extended_text_field
+description: 扩展官方TextField组件
 version: 0.0.1
-author:
-homepage:
+homepage: https://github.com/lucky1213/extended_textfield
 
 environment:
   sdk: ">=2.7.0 <3.0.0"

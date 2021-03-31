@@ -1,4 +1,4 @@
-part of extended_textfield;
+part of flutter_extended_text_field;
 
 /// Signature for the callback that reports when the user changes the selection
 /// (including the cursor location).

@@ -1,4 +1,4 @@
-library extended_textfield;
+library flutter_extended_text_field;
 
 import 'dart:async';
 import 'dart:math' as math;

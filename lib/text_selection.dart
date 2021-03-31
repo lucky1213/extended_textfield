@@ -1,4 +1,4 @@
-part of extended_textfield;
+part of flutter_extended_text_field;
 
 
 abstract class ExtendedTextSelectionGestureDetectorBuilderDelegate {
