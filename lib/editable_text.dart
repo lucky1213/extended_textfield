@@ -2336,7 +2336,7 @@ class _Editable extends LeafRenderObjectWidget {
       textScaleFactor: textScaleFactor,
       textAlign: textAlign,
       textDirection: textDirection,
-      locale: locale ?? Localizations.localeOf(context, nullOk: true),
+      locale: locale ?? Localizations.localeOf(context),
       selection: value.selection,
       offset: offset,
       onSelectionChanged: onSelectionChanged,
@@ -2381,7 +2381,7 @@ class _Editable extends LeafRenderObjectWidget {
       ..textScaleFactor = textScaleFactor
       ..textAlign = textAlign
       ..textDirection = textDirection
-      ..locale = locale ?? Localizations.localeOf(context, nullOk: true)
+      ..locale = locale ?? Localizations.localeOf(context)
       ..selection = value.selection
       ..offset = offset
       ..onSelectionChanged = onSelectionChanged
