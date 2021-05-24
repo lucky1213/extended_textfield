@@ -18,7 +18,7 @@ class ExtendedTextSelectionGestureDetectorBuilder {
   ///
   /// The [delegate] must not be null.
   ExtendedTextSelectionGestureDetectorBuilder({
-    @required this.delegate,
+    required this.delegate,
   }) : assert(delegate != null);
 
   /// The delegate for this [ExtendedTextSelectionGestureDetectorBuilder].
@@ -28,6 +28,21 @@ class ExtendedTextSelectionGestureDetectorBuilder {
   /// the correct gesture handlers to the gesture detector.
   @protected
   final ExtendedTextSelectionGestureDetectorBuilderDelegate delegate;
+
+  /// Returns true iff lastSecondaryTapDownPosition was on selection.
+  bool get _lastSecondaryTapWasOnSelection {
+    assert(renderEditable.lastSecondaryTapDownPosition != null);
+    if (renderEditable.selection == null) {
+      return false;
+    }
+
+    final TextPosition textPosition = renderEditable.getPositionForPoint(
+      renderEditable.lastSecondaryTapDownPosition!,
+    );
+
+    return renderEditable.selection!.base.offset <= textPosition.offset
+        && renderEditable.selection!.extent.offset >= textPosition.offset;
+  }
 
   /// Whether to show the selection toolbar.
   ///
@@ -40,7 +55,7 @@ class ExtendedTextSelectionGestureDetectorBuilder {
   /// The [State] of the [EditableText] for which the builder will provide a
   /// [TextSelectionGestureDetector].
   @protected
-  ExtendedEditableTextState get editableText => delegate.editableTextKey.currentState;
+  ExtendedEditableTextState get editableText => delegate.editableTextKey.currentState!;
 
   /// The [RenderObject] of the [EditableText] for which the builder will
   /// provide a [TextSelectionGestureDetector].
@@ -62,10 +77,10 @@ class ExtendedTextSelectionGestureDetectorBuilder {
     // through a touch screen (via either a finger or a stylus). A mouse shouldn't
     // trigger the selection overlay.
     // For backwards-compatibility, we treat a null kind the same as touch.
-    final PointerDeviceKind kind = details.kind;
+    final PointerDeviceKind? kind = details.kind;
     _shouldShowSelectionToolbar = kind == null
-                              || kind == PointerDeviceKind.touch
-                              || kind == PointerDeviceKind.stylus;
+      || kind == PointerDeviceKind.touch
+      || kind == PointerDeviceKind.stylus;
   }
 
   /// Handler for [TextSelectionGestureDetector.onForcePressStart].
@@ -191,6 +206,35 @@ class ExtendedTextSelectionGestureDetectorBuilder {
       editableText.showToolbar();
   }
 
+  /// Handler for [TextSelectionGestureDetector.onSecondaryTap].
+  ///
+  /// By default, selects the word if possible and shows the toolbar.
+  @protected
+  void onSecondaryTap() {
+    if (delegate.selectionEnabled) {
+      if (!_lastSecondaryTapWasOnSelection) {
+        renderEditable.selectWord(cause: SelectionChangedCause.tap);
+      }
+      if (shouldShowSelectionToolbar) {
+        editableText.hideToolbar();
+        editableText.showToolbar();
+      }
+    }
+  }
+
+  /// Handler for [TextSelectionGestureDetector.onSecondaryTapDown].
+  ///
+  /// See also:
+  ///
+  ///  * [TextSelectionGestureDetector.onSecondaryTapDown], which triggers this
+  ///    callback.
+  ///  * [onSecondaryTap], which is typically called after this.
+  @protected
+  void onSecondaryTapDown(TapDownDetails details) {
+    renderEditable.handleSecondaryTapDown(details);
+    _shouldShowSelectionToolbar = true;
+  }
+
   /// Handler for [TextSelectionGestureDetector.onDoubleTapDown].
   ///
   /// By default, it selects a word through [RenderEditable.selectWord] if
@@ -219,6 +263,13 @@ class ExtendedTextSelectionGestureDetectorBuilder {
   ///    this callback.
   @protected
   void onDragSelectionStart(DragStartDetails details) {
+    if (!delegate.selectionEnabled)
+      return;
+    final PointerDeviceKind? kind = details.kind;
+    _shouldShowSelectionToolbar = kind == null
+      || kind == PointerDeviceKind.touch
+      || kind == PointerDeviceKind.stylus;
+
     renderEditable.selectPositionAt(
       from: details.globalPosition,
       cause: SelectionChangedCause.drag,
@@ -236,6 +287,8 @@ class ExtendedTextSelectionGestureDetectorBuilder {
   ///    this callback./lib/src/material/text_field.dart
   @protected
   void onDragSelectionUpdate(DragStartDetails startDetails, DragUpdateDetails updateDetails) {
+    if (!delegate.selectionEnabled)
+      return;
     renderEditable.selectPositionAt(
       from: startDetails.globalPosition,
       to: updateDetails.globalPosition,
@@ -259,15 +312,17 @@ class ExtendedTextSelectionGestureDetectorBuilder {
   ///
   /// The [child] or its subtree should contain [EditableText].
   Widget buildGestureDetector({
-    Key key,
-    HitTestBehavior behavior,
-    Widget child,
+    Key? key,
+    HitTestBehavior? behavior,
+    required Widget child,
   }) {
     return TextSelectionGestureDetector(
       key: key,
       onTapDown: onTapDown,
       onForcePressStart: delegate.forcePressEnabled ? onForcePressStart : null,
       onForcePressEnd: delegate.forcePressEnabled ? onForcePressEnd : null,
+      onSecondaryTap: onSecondaryTap,
+      onSecondaryTapDown: onSecondaryTapDown,
       onSingleTapUp: onSingleTapUp,
       onSingleTapCancel: onSingleTapCancel,
       onSingleLongTapStart: onSingleLongTapStart,

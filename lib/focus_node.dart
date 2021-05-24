@@ -40,7 +40,7 @@ class ExtendedFocusNode extends FocusNode {
   }
 
   @override
-  void requestFocus([FocusNode node, bool keyboard = true]) {
+  void requestFocus([FocusNode? node, bool keyboard = true]) {
     keyboardToken = keyboard;
     if (keyboardToken) {
       showKeyboard();

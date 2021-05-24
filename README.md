@@ -1,6 +1,6 @@
-# hello
+# flutter_extended_text_field
 
-A new Flutter package project.
+Extend official TextField widget, support focus without pop-up keyboard. 
 
 ## Getting Started
 
