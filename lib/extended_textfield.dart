@@ -468,7 +468,7 @@ class ExtendedTextField extends StatefulWidget {
   @Deprecated(
     'Use maxLengthEnforcement parameter which provides more specific '
     'behavior related to the maxLength limit. '
-    'This feature was deprecated after v1.25.0-5.0.pre.'
+    'This feature was deprecated after v1.25.0-5.0.pre.',
   )
   final bool maxLengthEnforced;
 
@@ -997,6 +997,7 @@ class _ExtendedTextFieldState extends State<ExtendedTextField> with RestorationM
     final Color selectionColor;
     Color? autocorrectionTextRectColor;
     Radius? cursorRadius = widget.cursorRadius;
+    VoidCallback? handleDidGainAccessibilityFocus;
 
     switch (theme.platform) {
       case TargetPlatform.iOS:
@@ -1022,6 +1023,13 @@ class _ExtendedTextFieldState extends State<ExtendedTextField> with RestorationM
         selectionColor = selectionTheme.selectionColor ?? cupertinoTheme.primaryColor.withOpacity(0.40);
         cursorRadius ??= const Radius.circular(2.0);
         cursorOffset = Offset(iOSHorizontalOffset / MediaQuery.of(context).devicePixelRatio, 0);
+        handleDidGainAccessibilityFocus = () {
+          // macOS automatically activated the TextField when it receives
+          // accessibility focus.
+          if (!_effectiveFocusNode.hasFocus && _effectiveFocusNode.canRequestFocus) {
+            _effectiveFocusNode.requestFocus();
+          }
+        };
         break;
 
       case TargetPlatform.android:
@@ -1146,7 +1154,7 @@ class _ExtendedTextFieldState extends State<ExtendedTextField> with RestorationM
       semanticsMaxValueLength = null;
     }
 
-    child = MouseRegion(
+    return MouseRegion(
       cursor: effectiveMouseCursor,
       onEnter: (PointerEnterEvent event) => _handleHover(true),
       onExit: (PointerExitEvent event) => _handleHover(false),
@@ -1163,6 +1171,7 @@ class _ExtendedTextFieldState extends State<ExtendedTextField> with RestorationM
                   _effectiveController.selection = TextSelection.collapsed(offset: _effectiveController.text.length);
                 _requestKeyboard();
               },
+              onDidGainAccessibilityFocus: handleDidGainAccessibilityFocus,
               child: child,
             );
           },
@@ -1173,13 +1182,5 @@ class _ExtendedTextFieldState extends State<ExtendedTextField> with RestorationM
         ),
       ),
     );
-
-    if (kIsWeb) {
-      return Shortcuts(
-        shortcuts: scrollShortcutOverrides,
-        child: child,
-      );
-    }
-    return child;
   }
 }

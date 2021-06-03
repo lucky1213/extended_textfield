@@ -1,11 +1,11 @@
 name: flutter_extended_text_field
 description: Extend official TextField widget, support focus without pop-up keyboard. 
-version: 1.0.0
+version: 1.0.1
 homepage: https://github.com/lucky1213/extended_textfield
 
 environment:
   sdk: ">=2.12.0 <3.0.0"
-  flutter: ">=1.12.13+hotfix.5"
+  flutter: ">=2.2.1"
 
 dependencies:
   flutter:

@@ -11,12 +11,12 @@ const int iOSHorizontalOffset = -2;
 class _TextSpanEditingController extends TextEditingController {
   _TextSpanEditingController({required TextSpan textSpan}):
     _textSpan = textSpan,
-    super(text: textSpan.toPlainText());
+    super(text: textSpan.toPlainText(includeSemanticsLabels: false));
 
   final TextSpan _textSpan;
 
   @override
-  TextSpan buildTextSpan({TextStyle? style ,bool? withComposing}) {
+  TextSpan buildTextSpan({required BuildContext context, TextStyle? style, required bool withComposing}) {
     // This does not care about composing.
     return TextSpan(
       style: style,
@@ -80,8 +80,7 @@ class _SelectableTextSelectionGestureDetectorBuilder extends ExtendedTextSelecti
           break;
       }
     }
-    if (_state.widget.onTap != null)
-      _state.widget.onTap!();
+    _state.widget.onTap?.call();
   }
 
   @override
@@ -452,7 +451,6 @@ class ExtendedSelectableTextState extends State<ExtendedSelectableText>
   @override
   void initState() {
     super.initState();
-    textSelectionControls = widget.selectionControls;
     _selectionGestureDetectorBuilder = _SelectableTextSelectionGestureDetectorBuilder(state: this);
     _controller = _TextSpanEditingController(
         textSpan: widget.textSpan ?? TextSpan(text: widget.data)
@@ -513,6 +511,8 @@ class ExtendedSelectableTextState extends State<ExtendedSelectableText>
     });
   }
 
+  TextSelection? _lastSeenTextSelection;
+
   void _handleSelectionChanged(TextSelection selection, SelectionChangedCause? cause) {
     final bool willShowSelectionHandles = _shouldShowSelectionHandles(cause);
     if (willShowSelectionHandles != _showSelectionHandles) {
@@ -520,10 +520,12 @@ class ExtendedSelectableTextState extends State<ExtendedSelectableText>
         _showSelectionHandles = willShowSelectionHandles;
       });
     }
-
-    if (widget.onSelectionChanged != null) {
+    // TODO(chunhtai): The selection may be the same. We should remove this
+    // check once this is fixed https://github.com/flutter/flutter/issues/76349.
+    if (widget.onSelectionChanged != null && _lastSeenTextSelection != selection) {
       widget.onSelectionChanged!(selection, cause);
     }
+    _lastSeenTextSelection = selection;
 
     switch (Theme.of(context).platform) {
       case TargetPlatform.iOS:
@@ -597,6 +599,7 @@ class ExtendedSelectableTextState extends State<ExtendedSelectableText>
     final TextSelectionThemeData selectionTheme = TextSelectionTheme.of(context);
     final FocusNode focusNode = _effectiveFocusNode;
 
+    textSelectionControls =  widget.selectionControls;
     final bool paintCursorAboveText;
     final bool cursorOpacityAnimates;
     Offset? cursorOffset;
@@ -698,12 +701,6 @@ class ExtendedSelectableTextState extends State<ExtendedSelectableText>
     );
 
     return Semantics(
-      onTap: () {
-        if (!_controller.selection.isValid)
-          _controller.selection = TextSelection.collapsed(offset: _controller.text.length);
-        if (allowFocus) 
-          _effectiveFocusNode.requestFocus();
-      },
       onLongPress: () {
         if (allowFocus) 
           _effectiveFocusNode.requestFocus();
