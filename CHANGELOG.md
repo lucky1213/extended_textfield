@@ -5,3 +5,4 @@
 ## [1.0.0] - Upgrade SDK 2.0.6 & support null-safety
 
 ## [1.0.1] - Upgrade SDK 2.2.1
+## [1.0.2] - Upgrade SDK 2.10.1

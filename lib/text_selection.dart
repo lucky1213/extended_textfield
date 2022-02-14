@@ -1,6 +1,5 @@
 part of flutter_extended_text_field;
 
-
 abstract class ExtendedTextSelectionGestureDetectorBuilderDelegate {
   /// [GlobalKey] to the [EditableText] for which the
   /// [ExtendedTextSelectionGestureDetectorBuilder] will build a [TextSelectionGestureDetector].
@@ -29,7 +28,7 @@ class ExtendedTextSelectionGestureDetectorBuilder {
   @protected
   final ExtendedTextSelectionGestureDetectorBuilderDelegate delegate;
 
-  /// Returns true iff lastSecondaryTapDownPosition was on selection.
+  /// Returns true if lastSecondaryTapDownPosition was on selection.
   bool get _lastSecondaryTapWasOnSelection {
     assert(renderEditable.lastSecondaryTapDownPosition != null);
     if (renderEditable.selection == null) {
@@ -40,8 +39,69 @@ class ExtendedTextSelectionGestureDetectorBuilder {
       renderEditable.lastSecondaryTapDownPosition!,
     );
 
-    return renderEditable.selection!.base.offset <= textPosition.offset
-        && renderEditable.selection!.extent.offset >= textPosition.offset;
+    return renderEditable.selection!.start <= textPosition.offset &&
+        renderEditable.selection!.end >= textPosition.offset;
+  }
+
+  // Expand the selection to the given global position.
+  //
+  // Either base or extent will be moved to the last tapped position, whichever
+  // is closest. The selection will never shrink or pivot, only grow.
+  //
+  // See also:
+  //
+  //   * [_extendSelection], which is similar but pivots the selection around
+  //     the base.
+  void _expandSelection(Offset offset, SelectionChangedCause cause) {
+    assert(cause != null);
+    assert(offset != null);
+    assert(renderEditable.selection?.baseOffset != null);
+
+    final TextPosition tappedPosition =
+        renderEditable.getPositionForPoint(offset);
+    final TextSelection selection = renderEditable.selection!;
+    final bool baseIsCloser =
+        (tappedPosition.offset - selection.baseOffset).abs() <
+            (tappedPosition.offset - selection.extentOffset).abs();
+    final TextSelection nextSelection = selection.copyWith(
+      baseOffset: baseIsCloser ? selection.extentOffset : selection.baseOffset,
+      extentOffset: tappedPosition.offset,
+    );
+
+    editableText.userUpdateTextEditingValue(
+      editableText.textEditingValue.copyWith(
+        selection: nextSelection,
+      ),
+      cause,
+    );
+  }
+
+  // Extend the selection to the given global position.
+  //
+  // Holds the base in place and moves the extent.
+  //
+  // See also:
+  //
+  //   * [_expandSelection], which is similar but always increases the size of
+  //     the selection.
+  void _extendSelection(Offset offset, SelectionChangedCause cause) {
+    assert(cause != null);
+    assert(offset != null);
+    assert(renderEditable.selection?.baseOffset != null);
+
+    final TextPosition tappedPosition =
+        renderEditable.getPositionForPoint(offset);
+    final TextSelection selection = renderEditable.selection!;
+    final TextSelection nextSelection = selection.copyWith(
+      extentOffset: tappedPosition.offset,
+    );
+
+    editableText.userUpdateTextEditingValue(
+      editableText.textEditingValue.copyWith(
+        selection: nextSelection,
+      ),
+      cause,
+    );
   }
 
   /// Whether to show the selection toolbar.
@@ -55,12 +115,19 @@ class ExtendedTextSelectionGestureDetectorBuilder {
   /// The [State] of the [EditableText] for which the builder will provide a
   /// [TextSelectionGestureDetector].
   @protected
-  ExtendedEditableTextState get editableText => delegate.editableTextKey.currentState!;
+  ExtendedEditableTextState get editableText =>
+      delegate.editableTextKey.currentState!;
 
   /// The [RenderObject] of the [EditableText] for which the builder will
   /// provide a [TextSelectionGestureDetector].
   @protected
   RenderEditable get renderEditable => editableText.renderEditable;
+
+  // The viewport offset pixels of the [RenderEditable] at the last drag start.
+  double _dragStartViewportOffset = 0.0;
+
+  // True iff a tap + shift has been detected but the tap has not yet come up.
+  bool _isShiftTapping = false;
 
   /// Handler for [TextSelectionGestureDetector.onTapDown].
   ///
@@ -78,9 +145,31 @@ class ExtendedTextSelectionGestureDetectorBuilder {
     // trigger the selection overlay.
     // For backwards-compatibility, we treat a null kind the same as touch.
     final PointerDeviceKind? kind = details.kind;
-    _shouldShowSelectionToolbar = kind == null
-      || kind == PointerDeviceKind.touch
-      || kind == PointerDeviceKind.stylus;
+    _shouldShowSelectionToolbar = kind == null ||
+        kind == PointerDeviceKind.touch ||
+        kind == PointerDeviceKind.stylus;
+
+    // Handle shift + click selection if needed.
+    final bool isShiftPressed =
+        HardwareKeyboard.instance.logicalKeysPressed.any(<LogicalKeyboardKey>{
+      LogicalKeyboardKey.shiftLeft,
+      LogicalKeyboardKey.shiftRight,
+    }.contains);
+    if (isShiftPressed && renderEditable.selection?.baseOffset != null) {
+      _isShiftTapping = true;
+      switch (defaultTargetPlatform) {
+        case TargetPlatform.iOS:
+        case TargetPlatform.macOS:
+          _expandSelection(details.globalPosition, SelectionChangedCause.tap);
+          break;
+        case TargetPlatform.android:
+        case TargetPlatform.fuchsia:
+        case TargetPlatform.linux:
+        case TargetPlatform.windows:
+          _extendSelection(details.globalPosition, SelectionChangedCause.tap);
+          break;
+      }
+    }
   }
 
   /// Handler for [TextSelectionGestureDetector.onForcePressStart].
@@ -124,8 +213,7 @@ class ExtendedTextSelectionGestureDetectorBuilder {
       from: details.globalPosition,
       cause: SelectionChangedCause.forcePress,
     );
-    if (shouldShowSelectionToolbar)
-      editableText.showToolbar();
+    if (shouldShowSelectionToolbar) editableText.showToolbar();
   }
 
   /// Handler for [TextSelectionGestureDetector.onSingleTapUp].
@@ -138,8 +226,37 @@ class ExtendedTextSelectionGestureDetectorBuilder {
   ///    this callback.
   @protected
   void onSingleTapUp(TapUpDetails details) {
+    if (_isShiftTapping) {
+      _isShiftTapping = false;
+      return;
+    }
+
     if (delegate.selectionEnabled) {
-      renderEditable.selectWordEdge(cause: SelectionChangedCause.tap);
+      switch (defaultTargetPlatform) {
+        case TargetPlatform.iOS:
+        case TargetPlatform.macOS:
+          switch (details.kind) {
+            case PointerDeviceKind.mouse:
+            case PointerDeviceKind.stylus:
+            case PointerDeviceKind.invertedStylus:
+              // Precise devices should place the cursor at a precise position.
+              renderEditable.selectPosition(cause: SelectionChangedCause.tap);
+              break;
+            case PointerDeviceKind.touch:
+            case PointerDeviceKind.unknown:
+              // On macOS/iOS/iPadOS a touch tap places the cursor at the edge
+              // of the word.
+              renderEditable.selectWordEdge(cause: SelectionChangedCause.tap);
+              break;
+          }
+          break;
+        case TargetPlatform.android:
+        case TargetPlatform.fuchsia:
+        case TargetPlatform.linux:
+        case TargetPlatform.windows:
+          renderEditable.selectPosition(cause: SelectionChangedCause.tap);
+          break;
+      }
     }
   }
 
@@ -152,7 +269,9 @@ class ExtendedTextSelectionGestureDetectorBuilder {
   ///  * [TextSelectionGestureDetector.onSingleTapCancel], which triggers
   ///    this callback.
   @protected
-  void onSingleTapCancel() {/* Subclass should override this method if needed. */}
+  void onSingleTapCancel() {
+    /* Subclass should override this method if needed. */
+  }
 
   /// Handler for [TextSelectionGestureDetector.onSingleLongTapStart].
   ///
@@ -202,8 +321,7 @@ class ExtendedTextSelectionGestureDetectorBuilder {
   ///    callback.
   @protected
   void onSingleLongTapEnd(LongPressEndDetails details) {
-    if (shouldShowSelectionToolbar)
-      editableText.showToolbar();
+    if (shouldShowSelectionToolbar) editableText.showToolbar();
   }
 
   /// Handler for [TextSelectionGestureDetector.onSecondaryTap].
@@ -248,8 +366,7 @@ class ExtendedTextSelectionGestureDetectorBuilder {
   void onDoubleTapDown(TapDownDetails details) {
     if (delegate.selectionEnabled) {
       renderEditable.selectWord(cause: SelectionChangedCause.tap);
-      if (shouldShowSelectionToolbar)
-        editableText.showToolbar();
+      if (shouldShowSelectionToolbar) editableText.showToolbar();
     }
   }
 
@@ -263,17 +380,18 @@ class ExtendedTextSelectionGestureDetectorBuilder {
   ///    this callback.
   @protected
   void onDragSelectionStart(DragStartDetails details) {
-    if (!delegate.selectionEnabled)
-      return;
+    if (!delegate.selectionEnabled) return;
     final PointerDeviceKind? kind = details.kind;
-    _shouldShowSelectionToolbar = kind == null
-      || kind == PointerDeviceKind.touch
-      || kind == PointerDeviceKind.stylus;
+    _shouldShowSelectionToolbar = kind == null ||
+        kind == PointerDeviceKind.touch ||
+        kind == PointerDeviceKind.stylus;
 
     renderEditable.selectPositionAt(
       from: details.globalPosition,
       cause: SelectionChangedCause.drag,
     );
+
+    _dragStartViewportOffset = renderEditable.offset.pixels;
   }
 
   /// Handler for [TextSelectionGestureDetector.onDragSelectionUpdate].
@@ -286,11 +404,17 @@ class ExtendedTextSelectionGestureDetectorBuilder {
   ///  * [TextSelectionGestureDetector.onDragSelectionUpdate], which triggers
   ///    this callback./lib/src/material/text_field.dart
   @protected
-  void onDragSelectionUpdate(DragStartDetails startDetails, DragUpdateDetails updateDetails) {
-    if (!delegate.selectionEnabled)
-      return;
+  void onDragSelectionUpdate(
+      DragStartDetails startDetails, DragUpdateDetails updateDetails) {
+    if (!delegate.selectionEnabled) return;
+
+    // Adjust the drag start offset for possible viewport offset changes.
+    final Offset startOffset = renderEditable.maxLines == 1
+        ? Offset(renderEditable.offset.pixels - _dragStartViewportOffset, 0.0)
+        : Offset(0.0, renderEditable.offset.pixels - _dragStartViewportOffset);
+
     renderEditable.selectPositionAt(
-      from: startDetails.globalPosition,
+      from: startDetails.globalPosition - startOffset,
       to: updateDetails.globalPosition,
       cause: SelectionChangedCause.drag,
     );
@@ -305,7 +429,9 @@ class ExtendedTextSelectionGestureDetectorBuilder {
   ///  * [TextSelectionGestureDetector.onDragSelectionEnd], which triggers this
   ///    callback.
   @protected
-  void onDragSelectionEnd(DragEndDetails details) {/* Subclass should override this method if needed. */}
+  void onDragSelectionEnd(DragEndDetails details) {
+    /* Subclass should override this method if needed. */
+  }
 
   /// Returns a [TextSelectionGestureDetector] configured with the handlers
   /// provided by this builder.

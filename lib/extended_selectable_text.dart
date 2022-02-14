@@ -9,14 +9,18 @@ part of flutter_extended_text_field;
 const int iOSHorizontalOffset = -2;
 
 class _TextSpanEditingController extends TextEditingController {
-  _TextSpanEditingController({required TextSpan textSpan}):
-    _textSpan = textSpan,
-    super(text: textSpan.toPlainText(includeSemanticsLabels: false));
+  _TextSpanEditingController({required TextSpan textSpan})
+      : assert(textSpan != null),
+        _textSpan = textSpan,
+        super(text: textSpan.toPlainText(includeSemanticsLabels: false));
 
   final TextSpan _textSpan;
 
   @override
-  TextSpan buildTextSpan({required BuildContext context, TextStyle? style, required bool withComposing}) {
+  TextSpan buildTextSpan(
+      {required BuildContext context,
+      TextStyle? style,
+      required bool withComposing}) {
     // This does not care about composing.
     return TextSpan(
       style: style,
@@ -31,7 +35,8 @@ class _TextSpanEditingController extends TextEditingController {
   }
 }
 
-class _SelectableTextSelectionGestureDetectorBuilder extends ExtendedTextSelectionGestureDetectorBuilder {
+class _SelectableTextSelectionGestureDetectorBuilder
+    extends ExtendedTextSelectionGestureDetectorBuilder {
   _SelectableTextSelectionGestureDetectorBuilder({
     required ExtendedSelectableTextState state,
   })  : _state = state,
@@ -154,9 +159,9 @@ class ExtendedSelectableText extends StatefulWidget {
   /// closest enclosing [DefaultTextStyle].
   ///
 
-  /// The [showCursor], [autofocus], [dragStartBehavior], and [data] parameters
-  /// must not be null. If specified, the [maxLines] argument must be greater
-  /// than zero.
+  /// The [showCursor], [autofocus], [dragStartBehavior], [selectionHeightStyle],
+  /// [selectionWidthStyle] and [data] parameters must not be null. If specified,
+  /// the [maxLines] argument must be greater than zero.
   const ExtendedSelectableText(
     String this.data, {
     Key? key,
@@ -175,11 +180,14 @@ class ExtendedSelectableText extends StatefulWidget {
     this.cursorHeight,
     this.cursorRadius,
     this.cursorColor,
+    this.selectionHeightStyle = ui.BoxHeightStyle.tight,
+    this.selectionWidthStyle = ui.BoxWidthStyle.tight,
     this.dragStartBehavior = DragStartBehavior.start,
     this.enableInteractiveSelection = true,
     this.selectionControls,
     this.onTap,
     this.scrollPhysics,
+    this.semanticsLabel,
     this.textHeightBehavior,
     this.textWidthBasis,
     this.onSelectionChanged,
@@ -187,11 +195,13 @@ class ExtendedSelectableText extends StatefulWidget {
   })  : assert(showCursor != null),
         assert(autofocus != null),
         assert(dragStartBehavior != null),
+        assert(selectionHeightStyle != null),
+        assert(selectionWidthStyle != null),
         assert(maxLines == null || maxLines > 0),
         assert(minLines == null || minLines > 0),
         assert(
           (maxLines == null) || (minLines == null) || (maxLines >= minLines),
-          'minLines can\'t be greater than maxLines',
+          "minLines can't be greater than maxLines",
         ),
         assert(
           data != null,
@@ -199,16 +209,16 @@ class ExtendedSelectableText extends StatefulWidget {
         ),
         textSpan = null,
         toolbarOptions = toolbarOptions ??
-          const ToolbarOptions(
-            selectAll: true,
-            copy: true,
-          ),
+            const ToolbarOptions(
+              selectAll: true,
+              copy: true,
+            ),
         super(key: key);
 
   /// Creates a selectable text widget with a [TextSpan].
   ///
   /// The [textSpan] parameter must not be null and only contain [TextSpan] in
-  /// [textSpan.children]. Other type of [InlineSpan] is not allowed.
+  /// [textSpan].children. Other type of [InlineSpan] is not allowed.
   ///
   /// The [autofocus] and [dragStartBehavior] arguments must not be null.
   const ExtendedSelectableText.rich(
@@ -229,35 +239,38 @@ class ExtendedSelectableText extends StatefulWidget {
     this.cursorHeight,
     this.cursorRadius,
     this.cursorColor,
+    this.selectionHeightStyle = ui.BoxHeightStyle.tight,
+    this.selectionWidthStyle = ui.BoxWidthStyle.tight,
     this.dragStartBehavior = DragStartBehavior.start,
     this.enableInteractiveSelection = true,
     this.selectionControls,
     this.onTap,
     this.scrollPhysics,
+    this.semanticsLabel,
     this.textHeightBehavior,
     this.textWidthBasis,
     this.onSelectionChanged,
     this.selectedAll = false,
-  }) :  assert(showCursor != null),
-    assert(autofocus != null),
-    assert(dragStartBehavior != null),
-    assert(maxLines == null || maxLines > 0),
-    assert(minLines == null || minLines > 0),
-    assert(
-      (maxLines == null) || (minLines == null) || (maxLines >= minLines),
-      'minLines can\'t be greater than maxLines',
-    ),
-    assert(
-      textSpan != null,
-      'A non-null TextSpan must be provided to a SelectableText.rich widget.',
-    ),
-    data = null,
-    toolbarOptions = toolbarOptions ??
-      const ToolbarOptions(
-        selectAll: true,
-        copy: true,
-      ),
-    super(key: key);
+  })  : assert(showCursor != null),
+        assert(autofocus != null),
+        assert(dragStartBehavior != null),
+        assert(maxLines == null || maxLines > 0),
+        assert(minLines == null || minLines > 0),
+        assert(
+          (maxLines == null) || (minLines == null) || (maxLines >= minLines),
+          "minLines can't be greater than maxLines",
+        ),
+        assert(
+          textSpan != null,
+          'A non-null TextSpan must be provided to a SelectableText.rich widget.',
+        ),
+        data = null,
+        toolbarOptions = toolbarOptions ??
+            const ToolbarOptions(
+              selectAll: true,
+              copy: true,
+            ),
+        super(key: key);
 
   /// The text to display.
   ///
@@ -292,7 +305,9 @@ class ExtendedSelectableText extends StatefulWidget {
   /// focusNode.addListener(() { print(myFocusNode.hasFocus); });
   /// ```
   ///
-  /// If null, this widget will create its own [FocusNode].
+  /// If null, this widget will create its own [FocusNode] with
+  /// [FocusNode.skipTraversal] parameter set to `true`, which causes the widget
+  /// to be skipped over during focus traversal.
   final FocusNode? focusNode;
 
   /// The style to use for the text.
@@ -338,6 +353,16 @@ class ExtendedSelectableText extends StatefulWidget {
   /// Defaults to the theme's `cursorColor` when null.
   final Color? cursorColor;
 
+  /// Controls how tall the selection highlight boxes are computed to be.
+  ///
+  /// See [ui.BoxHeightStyle] for details on available styles.
+  final ui.BoxHeightStyle selectionHeightStyle;
+
+  /// Controls how wide the selection highlight boxes are computed to be.
+  ///
+  /// See [ui.BoxWidthStyle] for details on available styles.
+  final ui.BoxWidthStyle selectionWidthStyle;
+
   /// {@macro flutter.widgets.editableText.enableInteractiveSelection}
   final bool enableInteractiveSelection;
 
@@ -377,7 +402,10 @@ class ExtendedSelectableText extends StatefulWidget {
   /// {@macro flutter.widgets.editableText.scrollPhysics}
   final ScrollPhysics? scrollPhysics;
 
-  /// {@macro flutter.dart:ui.textHeightBehavior}
+  /// {@macro flutter.widgets.Text.semanticsLabel}
+  final String? semanticsLabel;
+
+  /// {@macro dart.ui.textHeightBehavior}
   final TextHeightBehavior? textHeightBehavior;
 
   /// {@macro flutter.painting.textPainter.textWidthBasis}
@@ -394,24 +422,47 @@ class ExtendedSelectableText extends StatefulWidget {
   @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
-    properties.add(DiagnosticsProperty<String>('data', data, defaultValue: null));
-    properties.add(DiagnosticsProperty<FocusNode>('focusNode', focusNode, defaultValue: null));
-    properties.add(DiagnosticsProperty<TextStyle>('style', style, defaultValue: null));
-    properties.add(DiagnosticsProperty<bool>('autofocus', autofocus, defaultValue: false));
-    properties.add(DiagnosticsProperty<bool>('showCursor', showCursor, defaultValue: false));
+    properties
+        .add(DiagnosticsProperty<String>('data', data, defaultValue: null));
+    properties.add(DiagnosticsProperty<String>('semanticsLabel', semanticsLabel,
+        defaultValue: null));
+    properties.add(DiagnosticsProperty<FocusNode>('focusNode', focusNode,
+        defaultValue: null));
+    properties.add(
+        DiagnosticsProperty<TextStyle>('style', style, defaultValue: null));
+    properties.add(
+        DiagnosticsProperty<bool>('autofocus', autofocus, defaultValue: false));
+    properties.add(DiagnosticsProperty<bool>('showCursor', showCursor,
+        defaultValue: false));
     properties.add(IntProperty('minLines', minLines, defaultValue: null));
     properties.add(IntProperty('maxLines', maxLines, defaultValue: null));
-    properties.add(EnumProperty<TextAlign>('textAlign', textAlign, defaultValue: null));
-    properties.add(EnumProperty<TextDirection>('textDirection', textDirection, defaultValue: null));
-    properties.add(DoubleProperty('textScaleFactor', textScaleFactor, defaultValue: null));
-    properties.add(DoubleProperty('cursorWidth', cursorWidth, defaultValue: 2.0));
-    properties.add(DoubleProperty('cursorHeight', cursorHeight, defaultValue: null));
-    properties.add(DiagnosticsProperty<Radius>('cursorRadius', cursorRadius, defaultValue: null));
-    properties.add(DiagnosticsProperty<Color>('cursorColor', cursorColor, defaultValue: null));
-    properties.add(FlagProperty('selectionEnabled', value: selectionEnabled, defaultValue: true, ifFalse: 'selection disabled'));
-    properties.add(DiagnosticsProperty<TextSelectionControls>('selectionControls', selectionControls, defaultValue: null));
-    properties.add(DiagnosticsProperty<ScrollPhysics>('scrollPhysics', scrollPhysics, defaultValue: null));
-    properties.add(DiagnosticsProperty<TextHeightBehavior>('textHeightBehavior', textHeightBehavior, defaultValue: null));
+    properties.add(
+        EnumProperty<TextAlign>('textAlign', textAlign, defaultValue: null));
+    properties.add(EnumProperty<TextDirection>('textDirection', textDirection,
+        defaultValue: null));
+    properties.add(
+        DoubleProperty('textScaleFactor', textScaleFactor, defaultValue: null));
+    properties
+        .add(DoubleProperty('cursorWidth', cursorWidth, defaultValue: 2.0));
+    properties
+        .add(DoubleProperty('cursorHeight', cursorHeight, defaultValue: null));
+    properties.add(DiagnosticsProperty<Radius>('cursorRadius', cursorRadius,
+        defaultValue: null));
+    properties.add(DiagnosticsProperty<Color>('cursorColor', cursorColor,
+        defaultValue: null));
+    properties.add(FlagProperty('selectionEnabled',
+        value: selectionEnabled,
+        defaultValue: true,
+        ifFalse: 'selection disabled'));
+    properties.add(DiagnosticsProperty<TextSelectionControls>(
+        'selectionControls', selectionControls,
+        defaultValue: null));
+    properties.add(DiagnosticsProperty<ScrollPhysics>(
+        'scrollPhysics', scrollPhysics,
+        defaultValue: null));
+    properties.add(DiagnosticsProperty<TextHeightBehavior>(
+        'textHeightBehavior', textHeightBehavior,
+        defaultValue: null));
   }
 }
 
@@ -423,18 +474,21 @@ class ExtendedSelectableTextState extends State<ExtendedSelectableText>
   late _TextSpanEditingController _controller;
 
   FocusNode? _focusNode;
-  FocusNode get _effectiveFocusNode => widget.focusNode ?? (_focusNode ??= FocusNode());
+  FocusNode get _effectiveFocusNode =>
+      widget.focusNode ?? (_focusNode ??= FocusNode(skipTraversal: true));
 
   bool _showSelectionHandles = false;
 
-  late _SelectableTextSelectionGestureDetectorBuilder _selectionGestureDetectorBuilder;
+  late _SelectableTextSelectionGestureDetectorBuilder
+      _selectionGestureDetectorBuilder;
 
   // API for TextSelectionGestureDetectorBuilderDelegate.
   @override
   late bool forcePressEnabled;
 
   @override
-  final GlobalKey<ExtendedEditableTextState> editableTextKey = GlobalKey<ExtendedEditableTextState>();
+  final GlobalKey<ExtendedEditableTextState> editableTextKey =
+      GlobalKey<ExtendedEditableTextState>();
 
   @override
   bool get selectionEnabled => widget.selectionEnabled;
@@ -451,9 +505,10 @@ class ExtendedSelectableTextState extends State<ExtendedSelectableText>
   @override
   void initState() {
     super.initState();
-    _selectionGestureDetectorBuilder = _SelectableTextSelectionGestureDetectorBuilder(state: this);
+    _selectionGestureDetectorBuilder =
+        _SelectableTextSelectionGestureDetectorBuilder(state: this);
     _controller = _TextSpanEditingController(
-        textSpan: widget.textSpan ?? TextSpan(text: widget.data)
+      textSpan: widget.textSpan ?? TextSpan(text: widget.data),
     );
     _controller.addListener(_onControllerChanged);
 
@@ -462,8 +517,12 @@ class ExtendedSelectableTextState extends State<ExtendedSelectableText>
         if (_editableText != null && textSelectionControls != null) {
           final RenderBox renderBox = context.findRenderObject() as RenderBox;
           final Offset offset = renderBox.localToGlobal(Offset.zero);
-          final Rect selectionRect = Rect.fromLTWH(offset.dx, offset.dy, renderBox.size.width, renderBox.size.height);
-          _editableText!.renderEditable.selectWordsInRange(from: selectionRect.topLeft, to: selectionRect.bottomRight, cause: SelectionChangedCause.doubleTap);
+          final Rect selectionRect = Rect.fromLTWH(offset.dx, offset.dy,
+              renderBox.size.width, renderBox.size.height);
+          _editableText!.renderEditable.selectWordsInRange(
+              from: selectionRect.topLeft,
+              to: selectionRect.bottomRight,
+              cause: SelectionChangedCause.doubleTap);
           //_editableText.bringIntoView(_editableText.textEditingValue.selection.extent);
           t.cancel();
         }
@@ -474,10 +533,11 @@ class ExtendedSelectableTextState extends State<ExtendedSelectableText>
   @override
   void didUpdateWidget(ExtendedSelectableText oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.data != oldWidget.data || widget.textSpan != oldWidget.textSpan) {
+    if (widget.data != oldWidget.data ||
+        widget.textSpan != oldWidget.textSpan) {
       _controller.removeListener(_onControllerChanged);
       _controller = _TextSpanEditingController(
-          textSpan: widget.textSpan ?? TextSpan(text: widget.data)
+        textSpan: widget.textSpan ?? TextSpan(text: widget.data),
       );
       _controller.addListener(_onControllerChanged);
     }
@@ -496,13 +556,8 @@ class ExtendedSelectableTextState extends State<ExtendedSelectableText>
   }
 
   void _onControllerChanged() {
-    // if (_selection != _controller.selection) {
-    //   _selection = _controller.selection;
-    //   widget.onSelectionChanged?.call(_selection);
-    // } 
-
-    final bool showSelectionHandles = !_effectiveFocusNode.hasFocus
-      || !_controller.selection.isCollapsed;
+    final bool showSelectionHandles =
+        !_effectiveFocusNode.hasFocus || !_controller.selection.isCollapsed;
     if (showSelectionHandles == _showSelectionHandles) {
       return;
     }
@@ -513,7 +568,8 @@ class ExtendedSelectableTextState extends State<ExtendedSelectableText>
 
   TextSelection? _lastSeenTextSelection;
 
-  void _handleSelectionChanged(TextSelection selection, SelectionChangedCause? cause) {
+  void _handleSelectionChanged(
+      TextSelection selection, SelectionChangedCause? cause) {
     final bool willShowSelectionHandles = _shouldShowSelectionHandles(cause);
     if (willShowSelectionHandles != _showSelectionHandles) {
       setState(() {
@@ -522,7 +578,8 @@ class ExtendedSelectableTextState extends State<ExtendedSelectableText>
     }
     // TODO(chunhtai): The selection may be the same. We should remove this
     // check once this is fixed https://github.com/flutter/flutter/issues/76349.
-    if (widget.onSelectionChanged != null && _lastSeenTextSelection != selection) {
+    if (widget.onSelectionChanged != null &&
+        _lastSeenTextSelection != selection) {
       widget.onSelectionChanged!(selection, cause);
     }
     _lastSeenTextSelection = selection;
@@ -555,17 +612,13 @@ class ExtendedSelectableTextState extends State<ExtendedSelectableText>
     if (!_selectionGestureDetectorBuilder.shouldShowSelectionToolbar)
       return false;
 
-    if (_controller.selection.isCollapsed)
-      return false;
+    if (_controller.selection.isCollapsed) return false;
 
-    if (cause == SelectionChangedCause.keyboard)
-      return false;
+    if (cause == SelectionChangedCause.keyboard) return false;
 
-    if (cause == SelectionChangedCause.longPress)
-      return true;
+    if (cause == SelectionChangedCause.longPress) return true;
 
-    if (_controller.text.isNotEmpty)
-      return true;
+    if (_controller.text.isNotEmpty) return true;
 
     return false;
   }
@@ -583,23 +636,27 @@ class ExtendedSelectableTextState extends State<ExtendedSelectableText>
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // See AutomaticKeepAliveClientMixin.
-    assert(() {
-      return _controller._textSpan.visitChildren((InlineSpan span) => span.runtimeType == TextSpan);
-    }(), 'SelectableText only supports TextSpan; Other type of InlineSpan is not allowed');
+    // TODO(garyq): Assert to block WidgetSpans from being used here are removed,
+    // but we still do not yet have nice handling of things like carets, clipboard,
+    // and other features. We should add proper support. Currently, caret handling
+    // is blocked on SkParagraph switch and https://github.com/flutter/engine/pull/27010
+    // should be landed in SkParagraph after the switch is complete.
     assert(debugCheckHasMediaQuery(context));
     assert(debugCheckHasDirectionality(context));
     assert(
-      !(widget.style != null && widget.style!.inherit == false &&
-          (widget.style!.fontSize == null || widget.style!.textBaseline == null)),
+      !(widget.style != null &&
+          widget.style!.inherit == false &&
+          (widget.style!.fontSize == null ||
+              widget.style!.textBaseline == null)),
       'inherit false style must supply fontSize and textBaseline',
     );
 
     final ThemeData theme = Theme.of(context);
-    final TextSelectionThemeData selectionTheme = TextSelectionTheme.of(context);
+    final TextSelectionThemeData selectionTheme =
+        TextSelectionTheme.of(context);
     final FocusNode focusNode = _effectiveFocusNode;
 
-    textSelectionControls =  widget.selectionControls;
+    textSelectionControls = widget.selectionControls;
     final bool paintCursorAboveText;
     final bool cursorOpacityAnimates;
     Offset? cursorOffset;
@@ -614,10 +671,13 @@ class ExtendedSelectableTextState extends State<ExtendedSelectableText>
         textSelectionControls ??= cupertinoTextSelectionControls;
         paintCursorAboveText = true;
         cursorOpacityAnimates = true;
-        cursorColor ??= selectionTheme.cursorColor ?? cupertinoTheme.primaryColor;
-        selectionColor = selectionTheme.selectionColor ?? cupertinoTheme.primaryColor.withOpacity(0.40);
+        cursorColor ??=
+            selectionTheme.cursorColor ?? cupertinoTheme.primaryColor;
+        selectionColor = selectionTheme.selectionColor ??
+            cupertinoTheme.primaryColor.withOpacity(0.40);
         cursorRadius ??= const Radius.circular(2.0);
-        cursorOffset = Offset(iOSHorizontalOffset / MediaQuery.of(context).devicePixelRatio, 0);
+        cursorOffset = Offset(
+            iOSHorizontalOffset / MediaQuery.of(context).devicePixelRatio, 0);
         break;
 
       case TargetPlatform.macOS:
@@ -626,10 +686,13 @@ class ExtendedSelectableTextState extends State<ExtendedSelectableText>
         textSelectionControls ??= cupertinoDesktopTextSelectionControls;
         paintCursorAboveText = true;
         cursorOpacityAnimates = true;
-        cursorColor ??= selectionTheme.cursorColor ?? cupertinoTheme.primaryColor;
-        selectionColor = selectionTheme.selectionColor ?? cupertinoTheme.primaryColor.withOpacity(0.40);
+        cursorColor ??=
+            selectionTheme.cursorColor ?? cupertinoTheme.primaryColor;
+        selectionColor = selectionTheme.selectionColor ??
+            cupertinoTheme.primaryColor.withOpacity(0.40);
         cursorRadius ??= const Radius.circular(2.0);
-        cursorOffset = Offset(iOSHorizontalOffset / MediaQuery.of(context).devicePixelRatio, 0);
+        cursorOffset = Offset(
+            iOSHorizontalOffset / MediaQuery.of(context).devicePixelRatio, 0);
         break;
 
       case TargetPlatform.android:
@@ -639,7 +702,8 @@ class ExtendedSelectableTextState extends State<ExtendedSelectableText>
         paintCursorAboveText = false;
         cursorOpacityAnimates = false;
         cursorColor ??= selectionTheme.cursorColor ?? theme.colorScheme.primary;
-        selectionColor = selectionTheme.selectionColor ?? theme.colorScheme.primary.withOpacity(0.40);
+        selectionColor = selectionTheme.selectionColor ??
+            theme.colorScheme.primary.withOpacity(0.40);
         break;
 
       case TargetPlatform.linux:
@@ -649,7 +713,8 @@ class ExtendedSelectableTextState extends State<ExtendedSelectableText>
         paintCursorAboveText = false;
         cursorOpacityAnimates = false;
         cursorColor ??= selectionTheme.cursorColor ?? theme.colorScheme.primary;
-        selectionColor = selectionTheme.selectionColor ?? theme.colorScheme.primary.withOpacity(0.40);
+        selectionColor = selectionTheme.selectionColor ??
+            theme.colorScheme.primary.withOpacity(0.40);
         break;
     }
 
@@ -658,20 +723,24 @@ class ExtendedSelectableTextState extends State<ExtendedSelectableText>
     if (effectiveTextStyle == null || effectiveTextStyle.inherit)
       effectiveTextStyle = defaultTextStyle.style.merge(widget.style);
     if (MediaQuery.boldTextOverride(context))
-      effectiveTextStyle = effectiveTextStyle.merge(const TextStyle(fontWeight: FontWeight.bold));
+      effectiveTextStyle = effectiveTextStyle
+          .merge(const TextStyle(fontWeight: FontWeight.bold));
     final Widget child = RepaintBoundary(
       child: ExtendedEditableText(
         key: editableTextKey,
         style: effectiveTextStyle,
         readOnly: true,
-        textWidthBasis: widget.textWidthBasis ?? defaultTextStyle.textWidthBasis,
-        textHeightBehavior: widget.textHeightBehavior ?? defaultTextStyle.textHeightBehavior,
+        textWidthBasis:
+            widget.textWidthBasis ?? defaultTextStyle.textWidthBasis,
+        textHeightBehavior:
+            widget.textHeightBehavior ?? defaultTextStyle.textHeightBehavior,
         showSelectionHandles: _showSelectionHandles,
         showCursor: widget.showCursor,
         controller: _controller,
         focusNode: focusNode,
         strutStyle: widget.strutStyle ?? const StrutStyle(),
-        textAlign: widget.textAlign ?? defaultTextStyle.textAlign ?? TextAlign.start,
+        textAlign:
+            widget.textAlign ?? defaultTextStyle.textAlign ?? TextAlign.start,
         textDirection: widget.textDirection,
         textScaleFactor: widget.textScaleFactor,
         autofocus: widget.autofocus,
@@ -680,7 +749,8 @@ class ExtendedSelectableTextState extends State<ExtendedSelectableText>
         minLines: widget.minLines,
         maxLines: widget.maxLines ?? defaultTextStyle.maxLines,
         selectionColor: selectionColor,
-        selectionControls: widget.selectionEnabled ? textSelectionControls : null,
+        selectionControls:
+            widget.selectionEnabled ? textSelectionControls : null,
         onSelectionChanged: _handleSelectionChanged,
         onSelectionHandleTapped: _handleSelectionHandleTapped,
         rendererIgnoresPointer: true,
@@ -688,6 +758,8 @@ class ExtendedSelectableTextState extends State<ExtendedSelectableText>
         cursorHeight: widget.cursorHeight,
         cursorRadius: cursorRadius,
         cursorColor: cursorColor,
+        selectionHeightStyle: widget.selectionHeightStyle,
+        selectionWidthStyle: widget.selectionWidthStyle,
         cursorOpacityAnimates: cursorOpacityAnimates,
         cursorOffset: cursorOffset,
         paintCursorAboveText: paintCursorAboveText,
@@ -695,15 +767,15 @@ class ExtendedSelectableTextState extends State<ExtendedSelectableText>
         enableInteractiveSelection: widget.enableInteractiveSelection,
         dragStartBehavior: widget.dragStartBehavior,
         scrollPhysics: widget.scrollPhysics,
-        selectionHeightStyle: ui.BoxHeightStyle.max,
-        selectionWidthStyle: ui.BoxWidthStyle.max,
+        autofillHints: null,
       ),
     );
 
     return Semantics(
+      label: widget.semanticsLabel,
+      excludeSemantics: widget.semanticsLabel != null,
       onLongPress: () {
-        if (allowFocus) 
-          _effectiveFocusNode.requestFocus();
+        if (allowFocus) _effectiveFocusNode.requestFocus();
       },
       child: _selectionGestureDetectorBuilder.buildGestureDetector(
         behavior: HitTestBehavior.translucent,
